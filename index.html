@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026년 경기북부지사 반부패법령 고급 퀴즈</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase 설정 가이드:
+        // 1. Firebase 콘솔(https://console.firebase.google.com/) 접속
+        // 2. 프로젝트 생성 후 '웹 앱' 추가
+        // 3. 발급받은 구성 객체(firebaseConfig)를 아래에 붙여넣으세요.
+        let firebaseConfig;
+        try {
+            // 로컬 실행 환경용 (Canvas 내부 실행용)
+            firebaseConfig = JSON.parse(__firebase_config);
+        } catch (e) {
+            // 깃허브 배포 등 외부 환경에서 실행할 때 사용하는 설정값입니다.
+            // 아래 주석을 해제하고 실제 Firebase 콘솔에서 복사한 값을 입력하세요.
+            firebaseConfig = {
+                apiKey: "AIzaSyDfUie9k9_OKW0nWEiRcBURntUtSwH0-Ig",
+  authDomain: "ggbb2026-3b839.firebaseapp.com",
+  projectId: "ggbb2026-3b839",
+  storageBucket: "ggbb2026-3b839.firebasestorage.app",
+  messagingSenderId: "1067271302590",
+  appId: "1:1067271302590:web:1650e11810b07a45159def"
+            };
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'korea-north-quiz-2026';
+
+        window.state = {
+            user: null,
+            userName: "",
+            score: 0,
+            currentIndex: 0,
+            isAdmin: false,
+            leaderboard: []
+        };
+
+        const questions = [
+             {
+                cat: "청탁금지법",
+                q: "갑은 A광역시 소속 7급 공무원으로서 인허가 업무를 담당한다. 갑의 친형 을이 운영하는 건설회사가 갑의 담당 구역 내 건축허가를 신청하였다. 이에 관한 설명으로 옳은 것은?)",
+                opts: [
+                    "을은 갑의 직계존비속이 아니므로 청탁금지법상 어떠한 제한도 없다.",
+                    "갑이 직접 해당 허가를 처리하더라도 청탁금지법 위반이 성립하지 않는다.",
+                    "을이 갑에게 허가 처리를 부탁하면 을은 청탁금지법상 부정청탁 행위자가 될 수 있다.",
+                    "갑은 이해충돌방지법과 달리 청탁금지법상으로는 회피 의무를 지지 않는다.",
+                    "갑이 을로부터 허가와 무관하게 50만원을 차용하면 수수 금지 금품 위반이다."
+                ],
+                ans: 2,
+                exp: "청탁금지법 제5조는 자신 또는 제3자의 이익을 위해 직무상 처리하는 공직자등에게 직접 청탁하는 것을 부정청탁으로 규정합니다. 을이 갑에게 인허가 처리를 부탁하면 부정청탁 금지 대상 (제5조 제1항 제3호)에 해당할 수 있습니다. ①은 청탁금지법 적용범위 오해, ②는 부정청탁 수행 공직자 처벌을 간과, ④는 회피 의무 혼동(이해충돌방지법에 회피 의무가 있음), ⑤친형간 금전 차용은 직무 관련성 및 대가성이 없는 한 수수 금지 금품에 해당하지 않습니다."
+            },
+            {
+                cat: "청탁금지법",
+                q: "청탁금지법 위반에 대한 제재의 법적 성격과 관련하여 옳지 않은 것은?",
+                opts: [
+                    "100만원 초과 금품 수수는 형사처벌(3년 이하 징역 또는 3천만원 이하 벌금) 대상이다.",
+                    "100만원 이하 금품 수수는 수수액의 2~5배 과태료 대상이다.",
+                    "부정청탁에 따라 직무를 수행한 공직자는 형사처벌 외에 과태료를 중복 부과 받는다.",
+                    "과태료 부과에도 불구하고 형사소추는 별도로 이루어질 수 있다.",
+                    "수수 금지 금품을 즉시 신고 및 반환한 공직자는 제재를 받지 않는다."
+                ],
+                ans: 2,
+                exp: "청탁금지법은 부정청탁에 따라 직무를 수행한 공직자에 대해 형사처벌(제22조)만 규정하고 있으며, 동일 행위에 형사처벌과 과태료를 중복 부과하지 않습니다. 100만원 이하 금품 수수는 과태료 대상이고(형사처벌 아님), 100만원 초과는 형사처벌 대상입니다. 이중 제재는 이 법의 구조적 특징이 아닙니다."
+            },
+            {
+                cat: "공무원 행동강령",
+                q: "공무원 행동강령 제4조(공정한 직무수행을 해치는 지시에 대한 처리)와 청탁금지법 제5조(부정청탁 금지)의 교차 적용에 관한 설명으로 옳은 것은?",
+                opts: [
+                    "행동강령 제4조는 상급자의 부당 지시에만 적용되므로 외부 청탁자의 부정청탁에는 적용되지 않는다.",
+                    "외부 청탁을 받은 공무원은 청탁금지법에 따른 거절 의무만 있고, 행동강령에 따른 추가 신고 의무는 없다.",
+                    "상급자가 직접 특정 민원인의 인허가를 처리하도록 지시한 경우, 공무원은 행동강령과 청탁금지법 양측의 의무를 동시에 이행해야 할 수 있다.",
+                    "상급자의 지시가 행동강령 위반이면 자동으로 청탁금지법상 부정청탁에도 해당한다.",
+                    "행동강령 위반 지시를 이행한 공무원은 행동강령 위반만으로 처벌되며, 청탁금지법은 별도 적용되지 않는다."
+                ],
+                ans: 2,
+                exp: "상급자가 민원인의 청탁을 받고 부하에게 해당 인허가를 처리하도록 지시한 경우, 부하 공무원은 행동강령 제4조의 부당 지시 거부 절차를 이행해야 하는 동시에, 부정청탁을 받은 공직자로서 청탁금지법 제9조에 따른 신고 의무도 발생합니다. 두 법은 독립적으로 적용됩니다."
+            },
+            {
+                cat: "공무원 행동강령",
+                q: "공무원 행동강령 위반과 관련한 '제보자 보호' 및 '신고 처리'에 관한 설명으로 옳지 않은 것은?",
+                opts: [
+                    "행동강령 위반 신고자는 공익신고자보호법의 보호를 원용할 수 있는 경우가 있다..",
+                    "행동강령 책임관은 신고 접수 후 조사가 완료되기 전에 신고자의 신분을 공개해서는 안 된다.",
+                    "행동강령 위반 신고를 이유로 신고자에게 불이익을 준 경우 그 자체로 행동강령 위반이 된다.",
+                    "행동강령 위반 신고는 반드시 소속기관 행동강령책임관에게만 해야 하며, 외부 신고는 허용되지 않는다.",
+                    "행동강령책임관이 신고 내용을 소속기관장에게 보고하기 전에 독자적으로 사건을 종결할 수 없다."
+                ],
+                ans: 3,
+                exp: "공무원 행동강령 위반은 국민권익위원회, 감사원, 수사기관 등 외부기관에도 신고할 수 있습니다. 특히 공익신고자보호법 별표에 해당하는 위반의 경우 외부 신고도 보호를 받습니다. 내부 신고만을 강제하는 조항은 없습니다."
+            },
+            {
+                cat: "이해충돌방지법",
+                q: "이해충돌방지법 제5조(사적 이해관계자 신고 및 회피)와 관련하여, 다음 사례 중 신고 및 회피 의무가 발생하지 않는 경우는?",
+                opts: [
+                    "국토부 공무원 갑이 자신의 직계존속이 소유한 토지가 포함된 도로 개발 계획 심사에 참여하는 경우",
+                    "규제기관 공무원 을의 배우자가 3년 전 퇴직하고 현재 무관한 분야에서 활동 중인 기업이 을의 감사 대상이 된 경우",
+                    "공직자 병이 2년 내 임원으로 재직했던 법인이 병의 현 직무 관련 인허가를 신청한 경우",
+                    "공직자 정의 4촌 형제가 운영하는 회사가 정의 계약 담당 업무에서 수의계약 후보가 된 경우",
+                    "공직자 무가 현재 대리인으로 활동중인 단체가 무의 보조금 심사 대상이 된 경우"
+                ],
+                ans: 1,
+                exp: "이해충돌방지법 제2조 제5호 나목은 '최근 2년 이내에 재직한 법인 및 단체'를 사적 이해 관계자로 정의합니다. 배우자가 3년 전에 퇴직한 경우에는 이 기준(2년)을 초과하였으므로 을의 직접적 사적 이해 관계자 요건에 해당하지 않아 신고 및 회피 의무가 발생하지 않습니다."
+            },
+            {
+                cat: "공익신고자 보호법",
+                q: "공익신고자보호법상 보호받는 '공익신고'의 성립 요건에 관한 설명으로 옳지 않은 것은?",
+                opts: [
+                    "신고 대상 법률이 법 별표에 열거된 법률에 해당해야 한다.",
+                    "신고 내용이 허위임을 신고자가 알면서 신고한 경우 보호받지 못한다.",
+                    "신고자가 직접적 이해관계를 가진 경우에는 공익신고로 인정되지 않는다.",
+                    "신고의 동기가 사적 이익 추구와 혼재되어도 공익 목적이 포함되면 보호될 수 있다.",
+                    "공익침해 행위가 발생할 우려가 있는 단계에서도 신고할 수 있다."
+                ],
+                ans: 2,
+                exp: "공익신고자보호법은 신고자가 직접 이해관계를 갖는 경우를 보호 배제 사유로 명시하지 않습니다. 신고의 동기에 사적 이익이 포함되어 있더라도 공익침해 사실을 신고하는 행위 자체는 보호 대상이 될 수 있습니다. 보호 배제 사유는 허위 신고, 별표 법률 미해당 등에 한정됩니다."
+            },
+            {
+                cat: "공공재정 환수법",
+                q: "공공재정환수법상 '부정청구'의 성립 요건에 관한 설명으로 옳지 않은 것은?",
+                opts: [
+                    "거짓 신청서를 작성 및 제출하여 공공재정지급금을 교부받은 행위는 부정청구이다.",
+                    "지급 요건을 갖추었으나 수령 후 목적 외 용도로 사용한 행위도 부정청구에 해당할 수 있다.",
+                    "공공재정지급금을 교부받을 자격이 있는 자가 지급금을 수령한 경우에는 사용 용도와 무관하게 부정청구가 성립하지 않는다.",
+                    "허위의 실적 및 결과 보고를 통해 추가 지급금을 수령하는 행위는 부정청구이다.",
+                    "타인 명의를 이용하거나 타인의 자격을 빌려 지급금을 수령하는 행위는 부정청구이다."
+                ],
+                ans: 2,
+                exp: "공공재정환수법 제5조에 따른 부정청구는 '거짓 신청, 목적 외 사용, 지급 기준에 미달한 가격으로 납품'등을 포함한다. 자격이 있더라도 수령 후 목적 외 용도로 사용한 경우 부정청구에 해당할 수 있으므로 ③이 옳지 않습니다."
+            },
+            {
+                cat: "공공재정 환수법",
+                q: "공공재정환수법상 '제재부가금' 부과에 관한 설명으로 옳지 않은 것은?",
+                opts: [
+                    "제재부가금은 부정이익(환수금)과 별도로 추가 부과된다.",
+                    "부정청구 금액의 최대 5배까지 부과할 수 있다.",
+                    "자진신고 또는 협조 등 감경 사유가 있으면 제재부가금이 감경될 수 있다.",
+                    "제재부가금은 형사처벌이 확정된 이후에만 부과할 수 있다.",
+                    "타인 명의를 이용한 부정청구의 경우 명의자와 실제 수익자 모두에게 제재부가금을 부과할 수 있다."
+                ],
+                ans: 3,
+                exp: "공공재정환수법상 제재부가금은 행정제재로서, 형사처벌 확정을 요건으로 하지 않습니다. 행정기관이 부정청구 사실을 확인한 경우 형사 절차와 독립적으로 부과할 수 있으며, 형사소송 계속 중에도 행정 환수 절차는 진행이 가능합니다."
+            },
+            {
+                cat: "청탁금지법",
+                q: "청탁금지법 제5조 제1항 각 호의 부정청탁 금지 직무 유형에 해당하지 않는 것으로만 묶인 것은?",
+                opts: [
+                    "병역판정검사 결과 조작, 세금 징수 대상 제외 요청",
+                    "행정심판 및 조정 결과 개입, 공개 채용 시험 합격 청탁",
+                    "민간기업 임원 인사 개입 청탁, 사립대학 교수 임용 청탁",
+                    "소송담당 판사에 대한 재판 결과 청탁, 특허청 심사관에 대한 특허 등록 청탁",
+                    "국공립병원 의사의 진단서 내용 조작 요청, 공영방송 프로그램 편성 압력"
+                ],
+                ans: 2,
+                exp: "청탁금지법 제5조 제1항 각 호에 열거된 직무는 공공기관의 직무에 한정됩니다. 민간기업 임원에 대한 인사 개입은 공직자의 직무가 아니므로 해당하지 않습니다. 사립대학 교수 임용도 원칙적으로는 해당하지 않으나, 국공립대 교원 임용은 포함됩니다. 나머지 보기는 모두 법 제5조 각 호에 해당하는 직무를 포함하고 있습니다."
+            },
+            {
+                cat: "공무원 행동강령",
+                q: "공무원이 직무 관련자로부터 경조사비를 받은 경우에 관한 설명으로 옳지 않은 것은?",
+                opts: [
+                    "청탁금지법상 경조사비 상한(5만원)은 공무원 행동강령의 경조사비 기준과 동일하게 적용된다.",
+                    "화환 또는 조화는 경조사비와 별도로 10만원까지 허용된다.",
+                    "상한 초과 경조사비를 수령하면 청탁금지법상 과태료 및 행동강령상 징계가 중복 적용될 수 있다.",
+                    "경조사비가 금품 형태가 아닌 현물(식료품 등)로 제공된 경우 청탁금지법 적용 대상에서 제외된다.",
+                    "직무 관련자가 아닌 단순 지인으로부터 받는 경조사비는 금액과 무관하게 청탁금지법 적용을 받지 안흔ㄴ다."
+                ],
+                ans: 3,
+                exp: "청탁금지법 제2조 제3호에서 '금품등'은 금전, 유가증권, 부동산, 물품, 숙박권 등 일체의 재산적 이익을 포함한다. 현물 형태로 제공되는 식료품도 '물품'으로서 금품 등에 포함되므로 청탁금지법 적용 대상이다."
+            }
+        ];
+
+        async function init() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("인증 처리 중 오류 발생:", err);
+            }
+            
+            onAuthStateChanged(auth, (user) => {
+                window.state.user = user;
+                if (user) {
+                    const scoresRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+                    onSnapshot(scoresRef, (snapshot) => {
+                        window.state.leaderboard = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                            .sort((a, b) => b.score - a.score);
+                        renderLeaderboard();
+                    }, (err) => {
+                        console.error("데이터 수신 오류 (권한 부족):", err);
+                    });
+                }
+            });
+        }
+
+        window.startQuiz = () => {
+            const name = document.getElementById('user-name').value.trim();
+            if (!name) return alert("성함을 입력해주세요.");
+            window.state.userName = name;
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('quiz').classList.remove('hidden');
+            showQuestion();
+        };
+
+        function showQuestion() {
+            const q = questions[window.state.currentIndex];
+            document.getElementById('q-cat').innerText = q.cat;
+            document.getElementById('q-num').innerText = `${window.state.currentIndex + 1} / 10`;
+            document.getElementById('q-text').innerText = q.q;
+            document.getElementById('progress').style.width = `${(window.state.currentIndex + 1) * 10}%`;
+            
+            const optionsBox = document.getElementById('options');
+            optionsBox.innerHTML = q.opts.map((opt, i) => `
+                <button onclick="checkAnswer(${i})" class="opt-btn w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-600 transition-all font-medium flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:bg-indigo-100 group-hover:text-indigo-600">${i+1}</span>
+                    <span>${opt}</span>
+                </button>
+            `).join('');
+            document.getElementById('exp-box').classList.add('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+        }
+
+        window.checkAnswer = (idx) => {
+            const q = questions[window.state.currentIndex];
+            const btns = document.querySelectorAll('.opt-btn');
+            btns.forEach(b => b.disabled = true);
+            
+            if (idx === q.ans) {
+                window.state.score += 10;
+                btns[idx].classList.add('bg-green-50', 'border-green-500', 'text-green-700');
+            } else {
+                btns[idx].classList.add('bg-red-50', 'border-red-500', 'text-red-700');
+                btns[q.ans].classList.add('bg-green-50', 'border-green-500', 'text-green-700');
+            }
+            
+            document.getElementById('exp-text').innerText = q.exp;
+            document.getElementById('exp-box').classList.remove('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        };
+
+        window.nextStep = async () => {
+            if (window.state.currentIndex < 9) {
+                window.state.currentIndex++;
+                showQuestion();
+            } else {
+                await finishQuiz();
+            }
+        };
+
+        async function finishQuiz() {
+            document.getElementById('quiz').classList.add('hidden');
+            document.getElementById('result').classList.remove('hidden');
+            document.getElementById('final-score').innerText = window.state.score;
+            
+            if (window.state.user) {
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'scores'), {
+                        name: window.state.userName,
+                        score: window.state.score,
+                        uid: window.state.user.uid,
+                        ts: serverTimestamp()
+                    });
+                } catch (e) {
+                    console.error("데이터 저장 실패:", e);
+                }
+            }
+        }
+
+        function renderLeaderboard() {
+            const tbody = document.getElementById('board-body');
+            const thDel = document.getElementById('th-del');
+            if (!tbody) return;
+
+            if (window.state.isAdmin) {
+                thDel.classList.remove('hidden');
+                document.getElementById('excel-btn').classList.remove('hidden');
+                document.getElementById('admin-badge').classList.remove('hidden');
+            }
+
+            if (window.state.leaderboard.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-400">데이터를 불러오고 있습니다...</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = window.state.leaderboard.map((item, i) => `
+                <tr class="border-b border-gray-50 hover:bg-slate-50 transition-colors">
+                    <td class="p-3 text-center">
+                        <span class="${i < 3 ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'} w-6 h-6 inline-flex items-center justify-center rounded-full text-[10px] font-black">
+                            ${i+1}
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        <div class="font-bold text-gray-700">${item.name || '무명'}</div>
+                        <div class="text-[10px] text-gray-400">${item.ts ? new Date(item.ts.seconds * 1000).toLocaleDateString() : '최근'}</div>
+                    </td>
+                    <td class="p-3 text-right font-black text-indigo-600">${item.score}점</td>
+                    ${window.state.isAdmin ? `
+                        <td class="p-3 text-right">
+                            <button onclick="deleteEntry('${item.id}')" class="bg-red-50 text-red-500 hover:bg-red-500 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition-all">삭제</button>
+                        </td>
+                    ` : ''}
+                </tr>
+            `).join('');
+        }
+
+        window.deleteEntry = async (id) => {
+            if (!window.state.isAdmin) return;
+            if (confirm("이 기록을 삭제하시겠습니까?")) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', id));
+                } catch (err) {
+                    alert("삭제 권한이 없거나 오류가 발생했습니다.");
+                }
+            }
+        };
+
+        window.verifyAdmin = () => {
+            const pw = prompt("관리자 인증 번호를 입력하세요.");
+            if (pw === "2022284") {
+                window.state.isAdmin = true;
+                renderLeaderboard();
+                alert("관리자 모드가 활성화되었습니다. 모든 성적을 관리할 수 있습니다.");
+            } else if (pw !== null) {
+                alert("잘못된 번호입니다.");
+            }
+        };
+
+        window.downloadExcel = () => {
+            if (!window.state.isAdmin) return;
+            const data = window.state.leaderboard.map((item, i) => ({
+                "순위": i + 1,
+                "성함": item.name,
+                "점수": item.score,
+                "응시시간": item.ts ? new Date(item.ts.seconds * 1000).toLocaleString() : ""
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "성적표");
+            XLSX.writeFile(wb, `경기북부지사_성적결과_${new Date().toISOString().slice(0,10)}.xlsx`);
+        };
+
+        window.onload = init;
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800;900&display=swap');
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex justify-center items-start">
+    <div class="max-w-xl w-full glass-card rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20">
+        <!-- Header -->
+        <header class="bg-indigo-950 p-8 text-white relative">
+            <div class="relative z-10">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs font-bold text-indigo-300 tracking-tighter uppercase">Northern Gyeonggi Branch</span>
+                    <span id="admin-badge" class="hidden bg-red-500 text-[10px] px-2 py-0.5 rounded font-black animate-pulse">ADMIN MODE</span>
+                </div>
+                <h1 class="text-2xl font-black leading-tight">2026 반부패 법령<br>중급 퀴즈 시스템</h1>
+            </div>
+            
+            <button onclick="verifyAdmin()" class="absolute bottom-4 right-4 text-indigo-400 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </button>
+        </header>
+
+        <main class="p-8">
+            <!-- Setup -->
+            <section id="setup" class="py-12 text-center">
+                <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-8 shadow-inner">👤</div>
+                <h2 class="text-2xl font-black text-slate-800 mb-2">교육생 본인 인증</h2>
+                <p class="text-slate-400 text-sm mb-10">지사 내 성적 집계를 위해 실명을 입력해주세요.</p>
+                <input type="text" id="user-name" class="w-full border-b-4 border-slate-100 p-4 mb-10 focus:border-indigo-600 outline-none text-center text-2xl font-black text-slate-700 transition-all placeholder:text-slate-200" placeholder="홍길동">
+                <button onclick="startQuiz()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-95">퀴즈 시작하기</button>
+            </section>
+
+            <!-- Quiz -->
+            <section id="quiz" class="hidden">
+                <div class="flex justify-between items-end mb-4">
+                    <span id="q-cat" class="text-indigo-600 font-black text-xs uppercase bg-indigo-50 px-3 py-1 rounded-lg">CATEGORY</span>
+                    <span id="q-num" class="text-slate-300 font-bold text-sm italic">01 / 10</span>
+                </div>
+                <div class="h-3 w-full bg-slate-100 rounded-full mb-10 overflow-hidden">
+                    <div id="progress" class="h-full bg-indigo-600 transition-all duration-700" style="width: 0%"></div>
+                </div>
+                <h3 id="q-text" class="text-xl font-bold text-slate-800 mb-10 leading-relaxed min-h-[4rem]">질문을 불러오는 중...</h3>
+                <div id="options" class="space-y-4 mb-10"></div>
+                <div id="exp-box" class="hidden p-6 bg-slate-50 rounded-2xl border-l-4 border-indigo-600 mb-10 animate-fade-in">
+                    <p id="exp-text" class="text-sm text-slate-600 leading-relaxed font-medium"></p>
+                </div>
+                <button id="next-btn" onclick="nextStep()" class="hidden w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-black transition-all">다음 문항으로</button>
+            </section>
+
+            <!-- Result -->
+            <section id="result" class="hidden animate-fade-in">
+                <div class="text-center mb-12">
+                    <div class="text-sm font-bold text-slate-400 mb-2 tracking-widest uppercase">Your Final Score</div>
+                    <div class="text-8xl font-black text-indigo-600 tracking-tighter">
+                        <span id="final-score">0</span><span class="text-2xl text-slate-300 ml-1">/ 100</span>
+                    </div>
+                </div>
+                <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-black text-slate-800 flex items-center gap-2">
+                            실시간 성적 랭킹
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        </h3>
+                        <button id="excel-btn" onclick="downloadExcel()" class="hidden bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-xl text-[10px] font-black hover:bg-emerald-600 hover:text-white transition-all">EXCEL 추출</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="text-slate-400 font-black text-[10px] uppercase border-b border-slate-50">
+                                <tr>
+                                    <th class="p-3 w-10">RK</th>
+                                    <th class="p-3 text-left">Name</th>
+                                    <th class="p-3 text-right">Pts</th>
+                                    <th id="th-del" class="p-3 text-right hidden">Manage</th>
+                                </tr>
+                            </thead>
+                            <tbody id="board-body" class="font-medium"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <button onclick="location.reload()" class="mt-12 w-full text-slate-400 font-bold text-sm underline underline-offset-8 hover:text-indigo-600 transition-colors">테스트 다시 시작하기</button>
+            </section>
+        </main>
+        <footer class="p-8 pt-0 text-center">
+            <p class="text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em]">© 2026 Northern Gyeonggi Branch Anti-Corruption Education</p>
+        </footer>
+    </div>
+</body>
+</html>
